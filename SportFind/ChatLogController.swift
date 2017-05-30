@@ -10,7 +10,7 @@ import UIKit
 import Firebase
 import FirebaseDatabase
 
-class ChatLogController: UIViewController, UITableViewDelegate, UITableViewDataSource {
+class ChatLogController: UIViewController, UITableViewDelegate, UITableViewDataSource, UITextFieldDelegate {
 
     var post = Post()
     
@@ -29,9 +29,11 @@ class ChatLogController: UIViewController, UITableViewDelegate, UITableViewDataS
         sendbtn.layer.cornerRadius = 5
         table.backgroundColor = .clear
         table.separatorStyle = UITableViewCellSeparatorStyle.none
+        sendmsg.delegate = self
         fetchPosts()
         
         self.table.isScrollEnabled = true
+        self.hideKeyboardWhenTappedAround()
     
     }
 
@@ -42,21 +44,14 @@ class ChatLogController: UIViewController, UITableViewDelegate, UITableViewDataS
             
             let message = sendmsg.text
             
-            let post = ["author" : self.post.author,
+            let post = ["author" : FIRAuth.auth()?.currentUser?.displayName,
                         "message" : message!] as [String: Any]
             
             let postFeed = ["\(key)" : post]
             ref.child("posts").child(self.post.postID).child("messages").updateChildValues(postFeed)
             sendmsg.text = ""
         } else {
-            let alert = UIAlertController(title: "Invalid Message", message: "", preferredStyle: UIAlertControllerStyle.alert)
-            let OKAction = UIAlertAction(title: "OK", style: UIAlertActionStyle.default) { (action) in
-                alert.dismiss(animated: true, completion: nil)
-            }
-            
-            alert.addAction(OKAction)
-            
-            self.present(alert, animated: true, completion: nil)
+            sendmsg.resignFirstResponder()
         }
     }
     
@@ -83,6 +78,13 @@ class ChatLogController: UIViewController, UITableViewDelegate, UITableViewDataS
         })
         
     }
+
+    
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        self.sendmsg.resignFirstResponder()
+        send((Any).self)
+        return true
+    }
     
     func numberOfSections(in tableView: UITableView) -> Int {
         return 1
@@ -96,10 +98,23 @@ class ChatLogController: UIViewController, UITableViewDelegate, UITableViewDataS
         let cell = tableView.dequeueReusableCell(withIdentifier: "cell1", for: indexPath) as! ViewControllerTableViewCell
         cell.message.text = messages[indexPath.row]
         cell.name.text = names[indexPath.row]
+        cell.selectionStyle = UITableViewCellSelectionStyle.none
         return cell
     }
     
     func tableView(_ tableView: UITableView, willDisplay cell: UITableViewCell, forRowAt indexPath: IndexPath) {
         cell.backgroundColor = .clear
+    }
+}
+
+extension UIViewController {
+    func hideKeyboardWhenTappedAround() {
+        let tap: UITapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(UIViewController.dismissKeyboard))
+        tap.cancelsTouchesInView = false
+        view.addGestureRecognizer(tap)
+    }
+    
+    func dismissKeyboard() {
+        view.endEditing(true)
     }
 }
